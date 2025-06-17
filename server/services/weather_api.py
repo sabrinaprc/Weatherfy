@@ -1,32 +1,38 @@
-import os
-import httpx
-from dotenv import load_dotenv
+import openmeteo_requests
+from openmeteo_sdk.Variable import Variable
 
-load_dotenv()
+om = openmeteo_requests.Client()
 
-API_KEY = os.getenv("OPENWEATHER_API_KEY")
-
-async def get_weather_by_location(city=None, lat=None, lon=None):
-    base_url = "https://api.openweathermap.org/data/2.5/weather"
+async def get_weather_by_location(lat: float, lon: float):
     params = {
-        "appid": API_KEY,
-        "units": "metric"
+        "latitude": lat,
+        "longitude": lon,
+        "hourly": ["temperature_2m", "precipitation", "wind_speed_10m"],
+        "current": ["temperature_2m", "relative_humidity_2m"]
     }
 
-    if city:
-        params["q"] = city
-    elif lat and lon:
-        params["lat"] = lat
-        params["lon"] = lon
-    else:
-        return {"error": "Missing city or coordinates"}
+    try:
+        responses = om.weather_api("https://api.open-meteo.com/v1/forecast", params=params)
+        response = responses[0]
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get(base_url, params=params)
-        data = response.json()
+        current = response.Current()
+        variables = [current.Variables(i) for i in range(current.VariablesLength())]
+
+        temp = next(v for v in variables if v.Variable() == Variable.temperature and v.Altitude() == 2)
+        humidity = next(v for v in variables if v.Variable() == Variable.relative_humidity and v.Altitude() == 2)
+
         return {
-            "location": data.get("name"),
-            "temperature": data["main"]["temp"],
-            "condition": data["weather"][0]["main"],
-            "icon": data["weather"][0]["icon"]
+            "location": {
+                "lat": response.Latitude(),
+                "lon": response.Longitude(),
+                "timezone": response.Timezone(),
+                "elevation": response.Elevation()
+            },
+            "current": {
+                "time": current.Time(),
+                "temperature": temp.Value(),
+                "humidity": humidity.Value()
+            }
         }
+    except Exception as e:
+        return {"error": str(e)}
