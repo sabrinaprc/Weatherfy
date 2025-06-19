@@ -37,3 +37,15 @@ def get_user_profile():
     sp = spotipy.Spotify(auth=access_token)
     profile = sp.current_user()
     return profile
+
+@router.get("/top-tracks")
+def get_top_tracks(token: str):
+    if not token:
+        return {"error": "Token missing"}
+
+    sp = spotipy.Spotify(auth=token)
+    try:
+        results = sp.current_user_top_tracks(limit=50, time_range='medium_term')
+        return {"tracks": results["items"]}
+    except spotipy.SpotifyException as e:
+        return {"error": str(e)}
