@@ -4,6 +4,7 @@ from google import genai
 from google.genai import types
 import os
 from dotenv import load_dotenv
+from services.weather_api import get_weather_by_location
 
 load_dotenv()
 router = APIRouter()
@@ -11,14 +12,14 @@ router = APIRouter()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 @router.get("/mood-genres")
-def get_seed_genres(
-    weather_description: str = Query(...),
-):
+async def get_seed_genres(lat: float = Query(...), lon: float = Query(...)):
     try:
+        weather_data = await get_weather_by_location(lat, lon)
+        weather_desc = weather_data.get("current", {})
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=f"""
-            Choose 3 to 5 seed genres from the Spotify genre list that match the mood of the weather: '{weather_description}'.
+            Choose 3 to 5 seed genres from the Spotify genre list that match the mood of the weather: '{weather_desc}'.
 
             Only respond with a Python list of strings like:
             ["chill", "acoustic", "pop"]

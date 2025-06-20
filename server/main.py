@@ -1,9 +1,8 @@
 from fastapi import FastAPI
-from routes.weather import router as weather_router
 from fastapi.middleware.cors import CORSMiddleware
+from routes.weather import router as weather_router
 from routes.spotify_routes import router as spotify_router
-from routes import gemini_routes
-from routes import spotify_routes
+from routes.gemini_routes import router as gemini_router
 
 app = FastAPI()
 
@@ -15,8 +14,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(spotify_routes.router)
 app.include_router(spotify_router, prefix="/auth")
 app.include_router(weather_router, prefix="/weather")
-app.include_router(gemini_routes.router)
-# app.include_router(gemini_routes.router, prefix="/ai")
+app.include_router(gemini_router, prefix="/ai")
